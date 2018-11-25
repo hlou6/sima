@@ -5,6 +5,7 @@
 
 # Defines the following classes:
 #
+#   - class SimaOptions:        options of the program
 #   - class ObservedData:       for the observations of data points
 #   - class Prior:              for the priors used in the ABC algorithm
 #   - class GenerativeModel:    the model for the data, including its form and 
@@ -13,7 +14,61 @@
 #                               required members must be accessible through class functions
 
 import math
+from random import random as rand
 
+class SimaOptions:
+
+    def __init__(self):
+        self.sampling_method = ""
+        self.summary_statistic = ""
+        self.rejection_sampling_acceptance_limit = 0
+        self.num_samples = 0
+        self.num_processes = 0
+        self.batch_samples = 0
+        self.datafilename = ""
+
+    def set_data_file_name(self,name):
+        self.datafilename = name
+
+    def get_data_file_name(self):
+        return self.datafilename
+
+    def set_num_samples_processes(self,nsamples,nprocesses):
+        self.num_samples = nsamples
+        self.num_processes = nprocesses
+        bsampl = int(nsamples/nprocesses)
+        if abs(nsamples/nprocesses - float(bsampl)) < 1e-20:
+            self.batch_samples = bsampl
+        else:
+            print("Error: number of samples is not divisible by number of processes. The desired number of samples will not be calculated.")
+            self.batch_samples = bsampl
+
+    def get_num_samples(self):
+        return self.num_samples
+
+    def get_num_processes(self):
+        return self.num_processes
+
+    def get_batch_samples(self):
+        return self.batch_samples
+
+    def set_sampling_method(self,method):
+        self.sampling_method = method
+
+    def get_sampling_method(self):
+        return self.sampling_method
+
+    def set_summary_statistic(self,stat):
+        self.summary_statistic = stat
+
+    def get_summary_statistic(self):
+        return self.summary_statistic
+
+    def set_rs_limit(self,limit):
+        self.rejection_sampling_acceptance_limit = limit
+
+    def get_rs_limit(self):
+        return self.rejection_sampling_acceptance_limit
 
 class ObservedData:
     def __init__(self):
@@ -90,24 +145,75 @@ class Posterior:
         self.all_stats = [[] for x in range(len)]
         self.i_all = 0
 
-    def accept_and_save(self,limit,params,stat):
-        if (stat < limit):
-            if(params!=[]):
-                self.accepted_params[self.i_acc] = params
-                self.all_params[self.i_all] = params
-                self.accepted_stats[self.i_acc] = stat
-                self.all_stats[self.i_all] = stat
-                self.i_acc += 1
-                self.i_all += 1
+    def accept_and_save(self,options,params,stat,firstrun):
+
+        if options.sampling_method == "rejection_sampling":
+            # rejection sampling, assume that we have a single statistic
+            # length of stat = 1
+            if (stat < options.rejection_sampling_acceptance_limit):
+                self.save_rs_accept(params,stat)
             else:
-                print("Error: Length of params is 0.")
+                self.save_rs_reject(params,stat)
+
+        elif options.sampling_method == "mcmc":
+            # markov chain monte carlo, assume we have two statistics
+            
+            if firstrun:
+                # on first run, accept always
+                self.save_mcmc_accept(params[0],stat[0])
+            else:
+                # otherwise, check acceptance
+
+                # extract new and old params and stats
+                oldpars = params[0]
+                newpars = params[1]
+                oldstat = stat[0]
+                newstat = stat[1]
+
+                # calculate acceptance ratio
+                alpha = oldstat/newstat
+
+                if (alpha >= 1) :
+                    # accept always if alpha >= 1
+                    self.save_mcmc_accept(newpars,newstat)
+                else:
+                    # accept with the probability alpha
+                    rnum = rand()
+                    if rnum > alpha:
+                        self.save_mcmc_accept(newpars,newstat)
+                    else:
+                        self.save_mcmc_reject()
+
+    def save_mcmc_accept(self,params,stat):
+        if(params!=[]):
+            self.accepted_params[self.i_acc] = params
+            self.accepted_stats[self.i_acc] = stat
+            self.i_acc += 1
+            self.i_all += 1
         else:
-            if(params!=[]):
-                self.all_params[self.i_all] = params
-                self.all_stats[self.i_all] = stat
-                self.i_all += 1
-            else:
-                print("Error: Length of params is 0.")
+            print("Error: Length of params is 0.")
+
+    def save_mcmc_reject(self):
+        self.i_all += 1
+
+    def save_rs_accept(self,params,stat):
+        if(params!=[]):
+            self.accepted_params[self.i_acc] = params
+            self.all_params[self.i_all] = params
+            self.accepted_stats[self.i_acc] = stat
+            self.all_stats[self.i_all] = stat
+            self.i_acc += 1
+            self.i_all += 1
+        else:
+            print("Error: Length of params is 0.")
+    
+    def save_rs_reject(self,params,stat):
+        if(params!=[]):
+            self.all_params[self.i_all] = params
+            self.all_stats[self.i_all] = stat
+            self.i_all += 1
+        else:
+            print("Error: Length of params is 0.")
 
     # Copies the data of the posterior class to another instance, used to get the data out after parallel processing
     def get_data(self,nruns):

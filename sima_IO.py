@@ -40,7 +40,9 @@ def load_generative_model():
 #
 # Function to write the posterior samples to file
 #
-def write_posterior_params(posterior,datafilename):
+def write_posterior_params(posterior,options):
+
+    datafilename = options.get_data_file_name()
 
     print("Writing the parameters sampled from the posterior to file " + datafilename + "...")
 
@@ -127,7 +129,7 @@ def calc_running_time(t0,option):
         mins = int((tf - t0) / 60)
         secs = int(tf - t0 - 60 * mins)
 
-        print("Sampling took " + str(mins) + " minutes and " + str(secs) + "seconds.\n")
+        print("Sampling took " + str(mins) + " minutes and " + str(secs) + " seconds.\n")
         return 0
 
     else:
