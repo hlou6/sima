@@ -22,10 +22,24 @@ class SimaOptions:
         self.sampling_method = ""
         self.summary_statistic = ""
         self.rejection_sampling_acceptance_limit = 0
+        self.burn_in = 1000
+        self.mcmc_proposal_width = 0
         self.num_samples = 0
         self.num_processes = 0
         self.batch_samples = 0
         self.datafilename = ""
+
+    def get_burn_in(self):
+        return self.burn_in
+
+    def set_burn_in(self,bi):
+        self.burn_in = bi
+
+    def set_proposal_width(self,width):
+        self.mcmc_proposal_width = width
+
+    def get_proposal_width(self):
+        return self.mcmc_proposal_width
 
     def set_data_file_name(self,name):
         self.datafilename = name
@@ -34,7 +48,7 @@ class SimaOptions:
         return self.datafilename
 
     def set_num_samples_processes(self,nsamples,nprocesses):
-        self.num_samples = nsamples
+        self.num_samples = nsamples + self.burn_in
         self.num_processes = nprocesses
         bsampl = int(nsamples/nprocesses)
         if abs(nsamples/nprocesses - float(bsampl)) < 1e-20:
@@ -215,6 +229,17 @@ class Posterior:
         else:
             print("Error: Length of params is 0.")
 
+    def remove_burn_in(self, opt):
+        bip = opt.get_burn_in()
+        nacc = self.get_num_accepted()
+
+        self.accepted_params = self.accepted_params[bip:nacc]
+        self.accepted_stats = self.accepted_stats[bip:nacc]
+        self.i_acc -= bip
+        self.all_params = self.all_params[bip:nacc]
+        self.all_stats = self.all_stats[bip:nacc]
+        self.i_all -= bip
+
     # Copies the data of the posterior class to another instance, used to get the data out after parallel processing
     def get_data(self,nruns):
         posterior = Posterior(nruns)
@@ -234,7 +259,7 @@ class Posterior:
 
     def mean(self):
         if(self.accepted_params != []):
-            npars = len(self.all_params[0])
+            npars = len(self.accepted_params[0])
             nacc = self.i_acc
 
             if nacc != 0:
@@ -255,7 +280,7 @@ class Posterior:
 
     def stddev(self):
         if(self.accepted_params != []):
-            npars = len(self.all_params[0])
+            npars = len(self.accepted_params[0])
             nacc = self.i_acc
 
             if nacc != 0:
@@ -268,7 +293,8 @@ class Posterior:
 
                 parstddevs = [0 for x in range(npars)]
                 for parid in range(npars):
-                    parstddevs[parid] = math.sqrt((1.0/(nacc-1.0))*(x2sum[parid] - (1.0/nacc)*xsum[parid]*xsum[parid]))
+                    term = (1.0/(nacc-1.0))*(x2sum[parid] - (1.0/nacc)*xsum[parid]*xsum[parid])
+                    parstddevs[parid] = math.sqrt(term)
 
                 return parstddevs
             else:

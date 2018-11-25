@@ -34,7 +34,9 @@ if __name__ == "__main__":
     options = SimaOptions()
 
     options.set_rs_limit(0.01)
-    options.set_num_samples_processes(1000,4)
+    options.set_proposal_width(1.0)
+    options.set_burn_in(1000)
+    options.set_num_samples_processes(10000,4)
     options.set_sampling_method("mcmc")
     options.set_summary_statistic("sq_residual")
     options.set_data_file_name("test.txt")
@@ -76,6 +78,9 @@ if __name__ == "__main__":
         lock = 0
         posterior = Posterior(options.get_num_samples())
         sample_from_posterior_mcmc(model,priors,posterior,data,options,lock)
+        posterior.remove_burn_in(options)
+
+        print("Accepted " + str(100.0*posterior.i_acc/posterior.i_all) + " % samples.")
 
     else:
         print("Error: unknown sampling method " + str(options.sampling_method))
@@ -90,7 +95,7 @@ if __name__ == "__main__":
     calc_running_time(t0,"end")
 
     # write results to file
-    write_posterior_params(posterior,options)
+    #write_posterior_params(posterior,options)
 
 
 

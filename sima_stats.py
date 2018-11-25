@@ -6,6 +6,7 @@
 
 from random import random as rand
 import math
+from scipy.stats import norm
 
 from sima_classes import *
 
@@ -90,19 +91,24 @@ def sample_from_posterior_rejection_sampling(model,priors,posterior,data,opt,loc
 
 def sample_from_posterior_mcmc(model,priors,posterior,data,opt,lock):
 
+    # in mcmc sampling, the posterior.stats are the parameters we want
+    #
 
     while posterior.get_num_accepted() < opt.get_num_samples():
-
-        # sample the priors to get new parameters
-        newpars = get_params(model,priors)
 
         # get the current parameters
         if(posterior.i_acc > 0):
             oldpars = posterior.accepted_params[posterior.i_acc - 1]
             firstrun = False
         else:
-            oldpars = newpars
+            # on the first run, sample parameters from the priors
+            oldpars = get_params(model,priors)
             firstrun = True
+
+        # sample the proposal distribution for each parameter
+        newpars = []
+        for i in range(len(model.params)):
+            newpars.append(norm(oldpars[i],opt.get_proposal_width()).rvs())
 
         # calculate the summary statistic for the new parameters compared to observed data
         newsstat = calc_summary_stat(newpars,model,data,opt)
@@ -113,7 +119,7 @@ def sample_from_posterior_mcmc(model,priors,posterior,data,opt,lock):
         else:
             oldsstat = posterior.accepted_stats[posterior.i_acc -1]
 
-        # if the results are close enough, save to accepted parameters (reject otherwise)
+        # accept the new parameters based on the acceptance ratio
         posterior.accept_and_save(opt,[oldpars, newpars],[oldsstat, newsstat],firstrun)
 
         nacc = posterior.get_num_accepted()
