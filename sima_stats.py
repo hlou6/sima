@@ -94,6 +94,7 @@ def sample_from_posterior_mcmc(model,priors,posterior,data,opt,lock):
     # in mcmc sampling, the posterior.stats are the parameters we want
     #
 
+    nacc = 0
     while posterior.get_num_accepted() < opt.get_num_samples():
 
         # get the current parameters
@@ -105,10 +106,17 @@ def sample_from_posterior_mcmc(model,priors,posterior,data,opt,lock):
             oldpars = get_params(model,priors)
             firstrun = True
 
+        # calculate the proposal width 
+        burnin = opt.get_burn_in()
+        propwidth = opt.get_proposal_width_rel()
+        if nacc < burnin:
+            propwidth = (1.0 - propwidth)*(burnin - nacc)/burnin
+
         # sample the proposal distribution for each parameter
         newpars = []
         for i in range(len(model.params)):
-            newpars.append(norm(oldpars[i],opt.get_proposal_width()).rvs())
+            pw_thispar = max(abs(oldpars[i]*propwidth),opt.get_proposal_width_min())
+            newpars.append(norm(oldpars[i],pw_thispar).rvs())
 
         # calculate the summary statistic for the new parameters compared to observed data
         newsstat = calc_summary_stat(newpars,model,data,opt)

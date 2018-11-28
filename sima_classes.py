@@ -23,7 +23,8 @@ class SimaOptions:
         self.summary_statistic = ""
         self.rejection_sampling_acceptance_limit = 0
         self.burn_in = 1000
-        self.mcmc_proposal_width = 0
+        self.mcmc_proposal_width_rel = 0
+        self.mcmc_proposal_width_min = 0
         self.num_samples = 0
         self.num_processes = 0
         self.batch_samples = 0
@@ -35,11 +36,17 @@ class SimaOptions:
     def set_burn_in(self,bi):
         self.burn_in = bi
 
-    def set_proposal_width(self,width):
-        self.mcmc_proposal_width = width
+    def set_proposal_width_rel(self,width):
+        self.mcmc_proposal_width_rel = width
 
-    def get_proposal_width(self):
-        return self.mcmc_proposal_width
+    def get_proposal_width_rel(self):
+        return self.mcmc_proposal_width_rel
+
+    def set_proposal_width_min(self,width):
+        self.mcmc_proposal_width_min = width
+
+    def get_proposal_width_min(self):
+        return self.mcmc_proposal_width_min
 
     def set_data_file_name(self,name):
         self.datafilename = name
@@ -184,16 +191,16 @@ class Posterior:
                 oldstat = stat[0]
                 newstat = stat[1]
 
-                # calculate acceptance ratio
+                # calculate acceptance ratio, defined this way alpha > 1 has smaller summary statistic for new params
                 alpha = oldstat/newstat
 
                 if (alpha >= 1) :
                     # accept always if alpha >= 1
                     self.save_mcmc_accept(newpars,newstat)
                 else:
-                    # accept with the probability alpha
+                    # accept with the probability (1 - alpha) (should be alpha?)
                     rnum = rand()
-                    if rnum > alpha:
+                    if rnum > alpha: # why this works this way??? related to the definition of the acceptance ratio, but how
                         self.save_mcmc_accept(newpars,newstat)
                     else:
                         self.save_mcmc_reject()
