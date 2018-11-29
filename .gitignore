@@ -2,4 +2,4 @@
 *.sln
 *.pyproj
 *.pyc
-test.txt
+./test.txt
