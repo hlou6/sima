@@ -17,9 +17,6 @@ from sima_classes import *
 from sima_IO import *
 from sima_stats import *
 
-# input script
-from sima_input import *
-
 #
 # THE MAIN FUNCTION
 #
@@ -30,24 +27,8 @@ if __name__ == "__main__":
 
     t0 = calc_running_time(0,"begin")
 
-    # input parameters of the algorithm
-    options = SimaOptions()
-
-    options.set_rs_limit(0.01)
-    options.set_proposal_width_rel(0.01)
-    options.set_proposal_width_min(0.01)
-    options.set_burn_in(3000)
-    options.set_num_samples_processes(50000,4)
-    options.set_sampling_method("mcmc")
-    options.set_summary_statistic("sq_residual")
-    options.set_data_file_name("test.txt")
-
     # load the problem definition
-    data = load_observed_data()
-    priors = load_priors()
-    model = load_generative_model()
-
-
+    (model, data,priors,options) = read_input("sima.inp")
 
     #
     # begin sampling

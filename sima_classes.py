@@ -55,7 +55,8 @@ class SimaOptions:
         return self.datafilename
 
     def set_num_samples_processes(self,nsamples,nprocesses):
-        self.num_samples = nsamples + self.burn_in
+        if (nprocesses == 0): nprocesses = 1
+        self.num_samples = nsamples
         self.num_processes = nprocesses
         bsampl = int(nsamples/nprocesses)
         if abs(nsamples/nprocesses - float(bsampl)) < 1e-20:
